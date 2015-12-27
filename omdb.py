@@ -32,7 +32,7 @@ def make_not_found(movieN):
     return theD
 
 def getData(movieL):
-    movieN, seid, br, omdb = movieL
+    movieN, yr, seid, br = movieL
     if type(movieN) is type(3):
         movieN = '%s'%movieN
     elif movieN.lower().endswith(' a'):
@@ -65,7 +65,7 @@ def getDiscL():
 
     titleL=[]
     for row in ws.rows:
-        valL = [ row[i].value for i in range(3)]
+        valL = [ row[i].value for i in range(4)]
         valL.append('')
         titleL.append( valL )
 
