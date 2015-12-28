@@ -15,6 +15,7 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 
 _VERBOSE=True
+_DOIT=False
 
 OMDBdir = '/home/godzilla/Desktop/OMDBpy'
 irvXLS = '%s/dvd-list.xlsx'%OMDBdir
@@ -36,7 +37,9 @@ def make_not_found(movieN):
 
 def _getData(movieN, yr, seid):
     # need to add in epise=, season=, y= etc
-    reqStr = '?t=%s&r=json&tomatoes=true&type=%s'%(movieN, TYPE)
+    reqStr = '?t=%s&r=json&tomatoes=true&type=%s'%(movieN, TYPE.lower())
+    if yr: reqStr = reqStr+'&year=%s'%yr
+    seid='%s'%seid
     if not seid:
         pass
     elif seid.startswith('tt'):
@@ -49,16 +52,24 @@ def _getData(movieN, yr, seid):
             theE = None
         elif len(x)==2:
             theE = x[1]
+
+        if theS: reqStr = reqStr+'&season=%s'%theS
+        if theE: reqStr = reqStr+'&episode=%s'%theE
             
-    if yr: reqStr = reqStr+'&year=%s'%year
     if _VERBOSE: print reqStr
-    r = rget('http://www.omdbapi.com/'+reqStr)
-    res=r.json()
+    if _DOIT:
+        r = rget('http://www.omdbapi.com/'+reqStr)
+        res=r.json()
+    else:
+        res = make_not_found(movieN)
+        res['Response']=True
     return res
 
 def getData(movieL, ws):
     global TYPE
 
+    # TODO: search name and listing name may differ!!! grab name in ()
+    
     movieN, yr, seid, br, run, dled = movieL[0:6]
     if type(movieN) is type(3):
         movieN = '%s'%movieN
@@ -88,7 +99,7 @@ def getData(movieL, ws):
 
 
     if type(res) is type({}):
-        res=[rowD[key]  for key in keyL] 
+        res=[res[key]  for key in keyL] 
         
     ws.append(res)
 
@@ -104,7 +115,7 @@ def getDiscLold():
 
     return titleL
 
-def getDiscL():
+def getDiscL(save):
     wb = load_workbook(filename=infoXLS, read_only=False)
     ws = wb['AllInfo'] # ws is now an IterableWorksheet
 
@@ -113,12 +124,12 @@ def getDiscL():
         valL = [ row[i].value for i in range(len(keyL))]
         titleL.append( valL )
     
-    wb.save(backXLS)
+    if save: wb.save(backXLS)
     return titleL
 
-def main():
+def main(save=False):
     
-    titleL = getDiscL()
+    titleL = getDiscL(save)
 
     wb = Workbook()
     ws=wb.active
@@ -130,15 +141,17 @@ def main():
         print 'getting info for %s ...'%title[0]
         getData(title, ws)
         
-    wb.save(infoXLS)
+    if save: wb.save(infoXLS)
     badFP.close()
 
-if __name__ == '__main__':
-
+def __match():
     import re
     SEIDre= re.compile('^S\d+E\S+')
-
-    
     seidL = ('S1', 'S1E1', 'S1E#1.2') 
     for seid in seidL:
         print SEIDre.match(seid)
+    
+
+if __name__ == '__main__':
+
+    main()
