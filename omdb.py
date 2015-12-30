@@ -15,7 +15,7 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 
 _VERBOSE=True
-_DOIT=False
+_DOIT=True
 
 OMDBdir = '/home/godzilla/Desktop/OMDBpy'
 irvXLS = '%s/dvd-list.xlsx'%OMDBdir
@@ -26,7 +26,7 @@ badF = '%s/bad-movie-names.txt'%OMDBdir
 keyL = [u'Title', u'Year', u'Series / Episode / ID', u'B-R',
         u'Runtime', u'DLed', u'Director', u'Actors', u'tomatoMeter',
         u'imdbRating', u'Plot', u'tomatoConsensus', u'Genre',
-        u'Website', u'Awards', u'Language', u'Country', u'BoxOffice']
+        u'Website', u'Awards', u'Language', u'Country', u'BoxOffice', u'Type']
 
 TYPE='movie'   # default search mode
 
@@ -35,13 +35,13 @@ def make_not_found(movieN):
     theD[u'Title']= '%s'%movieN
     return theD
 
-def _getData(movieN, yr, seid):
+def _getData(movieN, yr, seid, type):
     # need to add in epise=, season=, y= etc
-    reqStr = '?t=%s&r=json&tomatoes=true&type=%s'%(movieN, TYPE.lower())
+    reqStr = '?r=json&tomatoes=true&type=%s'%(type or TYPE.lower())
     if yr: reqStr = reqStr+'&year=%s'%yr
-    seid='%s'%seid
+    #seid='%s'%seid
     if not seid:
-        pass
+        reqStr=reqStr+'&t=%s'%movieN
     elif seid.startswith('tt'):
         reqStr = reqStr+'&i=%s'%seid
     else:
@@ -53,6 +53,7 @@ def _getData(movieN, yr, seid):
         elif len(x)==2:
             theE = x[1]
 
+        reqStr=reqStr+'&t=%s'%movieN
         if theS: reqStr = reqStr+'&season=%s'%theS
         if theE: reqStr = reqStr+'&episode=%s'%theE
             
@@ -65,38 +66,82 @@ def _getData(movieN, yr, seid):
         res['Response']=True
     return res
 
-def getData(movieL, ws):
-    global TYPE
+def _splitName(movieN, part=1):
+    left = movieN.find('[')
+    if left==-1:
+        leftN = movieN
+        rightN = None
+    else:
+        leftN, rightN = movieN.split('[')
+        rightN=rightN.strip()[:-1]
 
-    # TODO: search name and listing name may differ!!! grab name in ()
-    
-    movieN, yr, seid, br, run, dled = movieL[0:6]
+    if part==0: return leftN
+    if part==1: return rightN
+    if part==2: return (leftN, rightN)
+
+def _joinNames(leftN, rightN):
+    name= '%s '%leftN
+    if rightN: name=name+' [%s]'%rightN
+    return name
+
+def _getSearchName(movieN):
+    searchN = _splitName(movieN) or movieN
+    return _normalizeSearchN(searchN)
+
+def _normalizeSearchN(movieN):
     if type(movieN) is type(3):
         movieN = '%s'%movieN
     elif movieN.lower().endswith(' a'):
          movieN='A '+movieN[:-1]
     elif movieN.lower().endswith(' the'):
         movieN='The '+movieN[:-3]
+    movieN=movieN.strip()
+    if movieN[-1]==',': movieN=movieN[:-1]
+    return movieN
+
+def _alphabetizeTitle(titleN):
+    movieN,searchN = _splitName(titleN, part=2)
+    movieN=movieN.strip()
+    if movieN[-1]==',': movieN=movieN[:-1]
+    if movieN.startswith('A '):
+        movieN=movieN[2:]+', A'
+    elif movieN.startswith('The '):
+        movieN=movieN[4:]+', The'
+    return _joinNames( movieN, searchN )
+
+def getData(movieL, ws, badFP):
+    global TYPE
+
+    # TODO: search name and listing name may differ!!! grab name in ()
+    
+    movieN, yr, seid, br, run, dled = movieL[0:6]
+    _type = movieL[-1]
 
     if dled=='x':                   # we have the data already, doanatouch
         res = movieL
+        if True:
+            res[0]=_alphabetizeTitle( movieN )
+            
     elif movieN.startswith('%%'):   # placeholder
         res=make_not_found(movieN)
         # switch modes
         TYPE=movieN[2:]
     else:                           # we need to get data
-        res=_getData(movieN, yr, seid)
+        searchN = _getSearchName(movieN)
+        print 'getting info for %s ...'%searchN
+        res=_getData(searchN, yr, seid, _type)
         # check for {"Response":"False","Error":"Movie not found!"}
         if res['Response'] == "False":
             print 'not found!!!'
-            badFP.write(movieN+'\n')
+            badFP.write(movieN.encode('utf8')+'\n')
             res=make_not_found(movieN)
             res['DLed']=''
         else:
             res['DLed']='x'
+            
+        res[u'Title']=_alphabetizeTitle( movieN )
         res[u'Series / Episode / ID'] = seid
         res[u'B-R'] = br
-
 
     if type(res) is type({}):
         res=[res[key]  for key in keyL] 
@@ -130,7 +175,7 @@ def getDiscL(save):
 def main(save=False):
     
     titleL = getDiscL(save)
-
+    
     wb = Workbook()
     ws=wb.active
     ws.title='AllInfo'
@@ -138,8 +183,7 @@ def main(save=False):
     badFP = open(badF, 'w')
     
     for title in titleL[1:]:
-        print 'getting info for %s ...'%title[0]
-        getData(title, ws)
+        getData(title, ws, badFP)
         
     if save: wb.save(infoXLS)
     badFP.close()
@@ -154,4 +198,4 @@ def __match():
 
 if __name__ == '__main__':
 
-    main()
+    main(save=True)
