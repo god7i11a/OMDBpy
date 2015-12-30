@@ -109,7 +109,7 @@ def _alphabetizeTitle(titleN):
         movieN=movieN[4:]+', The'
     return _joinNames( movieN, searchN )
 
-def getData(movieL, ws, badFP):
+def getData(movieL, badFP):
     
     movieN, yr, seid, br, run, dled = movieL[0:6]
     _type = movieL[-1]
@@ -143,8 +143,8 @@ def getData(movieL, ws, badFP):
 
     if type(res) is type({}):
         res=[res[key]  for key in keyL] 
-        
-    ws.append(res)
+
+    return res
 
 def needs_ID():
     wb = load_workbook(filename=infoXLS, read_only=True)
@@ -160,6 +160,9 @@ def needs_ID():
             newws.append([ row[i].value for i in range(len(keyL))] )
 
     newwb.save(idXLS)
+
+def fillID():
+    pass
 
 def getDiscL(save):
     wb = load_workbook(filename=infoXLS, read_only=False)
@@ -184,8 +187,9 @@ def main(save=False):
     badFP = open(badF, 'w')
     
     for title in titleL[1:]:
-        getData(title, ws, badFP)
-        
+        res=getData(title, ws, badFP)
+        ws.append(res)
+
     if save: wb.save(infoXLS)
     badFP.close()
 
