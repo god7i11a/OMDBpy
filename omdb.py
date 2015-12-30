@@ -138,7 +138,8 @@ def getData(movieL, ws, badFP):
             res['DLed']=''
         else:
             res['DLed']='x'
-            
+
+        # TODO: fix the following so we use newfound name as appropriate 
         res[u'Title']=_alphabetizeTitle( movieN )
         res[u'Series / Episode / ID'] = seid
         res[u'B-R'] = br
