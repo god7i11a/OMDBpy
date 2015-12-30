@@ -19,6 +19,7 @@ _DOIT=True
 
 OMDBdir = '/home/godzilla/Desktop/OMDBpy'
 idXLS = '%s/dvd-needs-id.xlsx'%OMDBdir
+fillidXLS = '%s/dvd-new-info.xlsx'%OMDBdir
 infoXLS= '%s/dvd-info.xlsx'%OMDBdir
 backXLS = '%s/dvd-info-bak.xlsx'%OMDBdir
 badF = '%s/bad-movie-names.txt'%OMDBdir
@@ -130,7 +131,7 @@ def getData(movieL, badFP):
         # check for {"Response":"False","Error":"Movie not found!"}
         if res['Response'] == "False":
             print 'not found!!!'
-            badFP.write(movieN.encode('utf8')+'\n')
+            if badFP: badFP.write(movieN.encode('utf8')+'\n')
             res=make_not_found(movieN)
             res['DLed']=''
         else:
@@ -162,7 +163,19 @@ def needs_ID():
     newwb.save(idXLS)
 
 def fillID():
-    pass
+    wb = load_workbook(filename=idXLS, read_only=True)
+    ws = wb['AllInfo'] # ws is now an IterableWorksheet
+
+    newwb = Workbook()
+    newws=newwb.active
+    newws.title='AllInfo'
+    
+    for row in ws.rows:
+        movieL = [ row[i].value for i in range(len(keyL))]
+        res = getData(movieL, None)
+        newws.append(res)
+
+    newwb.save(fillidXLS)
 
 def getDiscL(save):
     wb = load_workbook(filename=infoXLS, read_only=False)
@@ -198,5 +211,7 @@ if __name__ == '__main__':
 
     if 0:
         main(save=True)
-    else:
+    elif 0:
         needs_ID()
+    else:
+        fillID()
