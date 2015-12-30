@@ -110,8 +110,6 @@ def _alphabetizeTitle(titleN):
     return _joinNames( movieN, searchN )
 
 def getData(movieL, ws, badFP):
-
-    # TODO: search name and listing name may differ!!! grab name in ()
     
     movieN, yr, seid, br, run, dled = movieL[0:6]
     _type = movieL[-1]
