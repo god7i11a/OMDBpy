@@ -119,7 +119,7 @@ def getData(movieL, ws, badFP):
 
     if dled=='x':                   # we have the data already, doanatouch
         res = movieL
-        if True:
+        if False:
             res[0]=_alphabetizeTitle( movieN )
             
     elif movieN.startswith('%%'):   # placeholder
