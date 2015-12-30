@@ -18,7 +18,7 @@ _VERBOSE=True
 _DOIT=True
 
 OMDBdir = '/home/godzilla/Desktop/OMDBpy'
-irvXLS = '%s/dvd-list.xlsx'%OMDBdir
+idXLS = '%s/dvd-needs-id.xlsx'%OMDBdir
 infoXLS= '%s/dvd-info.xlsx'%OMDBdir
 backXLS = '%s/dvd-info-bak.xlsx'%OMDBdir
 badF = '%s/bad-movie-names.txt'%OMDBdir
@@ -146,17 +146,20 @@ def getData(movieL, ws, badFP):
         
     ws.append(res)
 
-def getDiscLold():
-    wb = load_workbook(filename=irvXLS, read_only=True)
-    ws = wb['Sheet1'] # ws is now an IterableWorksheet
+def needs_ID():
+    wb = load_workbook(filename=infoXLS, read_only=True)
+    ws = wb['AllInfo'] # ws is now an IterableWorksheet
 
-    titleL=[]
+    newwb = Workbook()
+    newws=newwb.active
+    newws.title='AllInfo'
+    
     for row in ws.rows:
-        valL = [ row[i].value for i in range(4)]
-        valL.append('')
-        titleL.append( valL )
+        dl = row[5].value
+        if dl is None:
+            newws.append([ row[i].value for i in range(len(keyL))] )
 
-    return titleL
+    newwb.save(idXLS)
 
 def getDiscL(save):
     wb = load_workbook(filename=infoXLS, read_only=False)
@@ -186,14 +189,10 @@ def main(save=False):
     if save: wb.save(infoXLS)
     badFP.close()
 
-def __match():
-    import re
-    SEIDre= re.compile('^S\d+E\S+')
-    seidL = ('S1', 'S1E1', 'S1E#1.2') 
-    for seid in seidL:
-        print SEIDre.match(seid)
-    
 
 if __name__ == '__main__':
 
-    main(save=True)
+    if 0:
+        main(save=True)
+    else:
+        needs_ID()
