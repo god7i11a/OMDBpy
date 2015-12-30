@@ -14,7 +14,7 @@ from requests import get as rget
 from openpyxl import load_workbook
 from openpyxl import Workbook
 
-_VERBOSE=True
+_VERBOSE=False
 _DOIT=True
 
 OMDBdir = '/home/godzilla/Desktop/OMDBpy'
@@ -29,12 +29,18 @@ keyL = [u'Title', u'Year', u'Series / Episode / ID', u'B-R',
         u'imdbRating', u'Plot', u'tomatoConsensus', u'Genre',
         u'Website', u'Awards', u'Language', u'Country', u'BoxOffice', u'Type']
 
+searchL = [ "Title","Year","imdbID","Type" ]
+
 TYPE='movie'   # default search mode
 
 def make_not_found(movieN):
     theD = {field: ''  for field in keyL}
     theD[u'Title']= '%s'%movieN
     return theD
+
+def _searchByName(name):
+    r=rget('http://www.omdbapi.com/?s=%s'%name)
+    return r.json()['Search']
 
 def _getData(movieN, yr, seid, type):
     # need to add in epise=, season=, y= etc
@@ -189,6 +195,32 @@ def getDiscL(save):
     if save: wb.save(backXLS)
     return titleL
 
+def getAll(movieN):
+    wb = Workbook()
+    ws=wb.active
+    ws.title='AllInfo'
+    ws.append(keyL)
+    badFP = open(badF, 'w')
+    
+    movieL=_searchByName(movieN)
+    for movieD in movieL:
+        name = movieD['Title']
+        imdbID = movieD['imdbID']
+        typ=movieD['Type']
+        yr = movieD['Year']
+        resD = _getData(name, yr, imdbID, typ)
+        resD[u'Series / Episode / ID'] = imdbID
+        resD['B-R']='???'
+        resD['DLed']='x'
+        if _VERBOSE:
+            keys =  (u'Title', u'Year', u'Series / Episode / ID', u'Runtime', u'Director', u'Actors',
+                     u'tomatoMeter', u'imdbRating', u'Plot',
+                     u'Genre', u'Type')
+            print [resD[key].encode('utf-8') for key in keys]
+            print
+        ws.append([resD[key] for key in keyL])
+    wb.save('%s.xlsx'%movieN)
+
 def main(save=False):
     
     titleL = getDiscL(save)
@@ -209,9 +241,20 @@ def main(save=False):
 
 if __name__ == '__main__':
 
-    if 0:
-        main(save=True)
-    elif 0:
-        needs_ID()
-    else:
-        fillID()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='OMDB API processor')
+    parser.add_argument('-r', '--run', action='store_true', default=False,     help='Run the whole list %s'%infoXLS)
+    parser.add_argument('-i', '--need', action='store_true', default=False,     help='Run the need id list %s'%idXLS)
+    parser.add_argument('-f', '--fill', action='store_true', default=False,     help='Run the need fill list %s'%fillidXLS)
+    parser.add_argument('-s', '--search', action='store_true', default=False,     help='Search for name')
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,     help='Verbose')
+    parser.add_argument('-n', '--name', default=False,     help='movie name')
+    args = parser.parse_args()
+
+    _VERBOSE = args.verbose
+    
+    if args.run:     main(save=True)
+    if args.need:    needs_ID()
+    if args.fill:    fillID()
+    if args.search:  getAll(args.name)
