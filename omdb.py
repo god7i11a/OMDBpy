@@ -221,6 +221,48 @@ def getAll(movieN):
         ws.append([resD[key] for key in keyL])
     wb.save('%s.xlsx'%movieN)
 
+def parseNYT():
+    fp = open('1000best.html', 'r')
+    data = fp.readlines()
+    fp.close()
+
+    wb = Workbook()
+    ws=wb.active
+    ws.title='AllInfo'
+    ws.append(keyL)
+    badFP = open(badF, 'w')    
+
+    titleL = []
+    for line in data:
+        if not line.startswith('<td><a href='): continue
+        start = line.find('w\">')
+        name=line[start+3:-11]
+        leftP = name.find('(')
+        movieN = name[0:leftP]
+        date = name[leftP+1:-1]
+        print movieN, date
+        resD = _getData(movieN, date, None, None)
+
+        if resD['Response'] == "False":
+            print 'not found!!!'
+            if badFP:
+                try:
+                    badFP.write(movieN.encode('utf8')+'\n')
+                except UnicodeDecodeError:
+                    badFP.write(movieN+'\n')
+            res=make_not_found(movieN)
+            resD['DLed']=''
+        else:
+            resD['DLed']='x'
+            try:
+                resD[u'Series / Episode / ID']=resD['imdbID']
+            except KeyError:
+                resD[u'Series / Episode / ID']=''
+                
+            resD['B-R']=''
+            ws.append([resD[key] for key in keyL])
+    wb.save('nytimes1000best.xlsx')
+    
 def main(save=False):
     
     titleL = getDiscL(save)
@@ -250,6 +292,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--search', action='store_true', default=False,     help='Search for name')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,     help='Verbose')
     parser.add_argument('-n', '--name', default=False,     help='movie name')
+    parser.add_argument('-t', '--nytimes',   action='store_true', default=False,     help='Run NY Times listing')
     args = parser.parse_args()
 
     _VERBOSE = args.verbose
@@ -258,3 +301,4 @@ if __name__ == '__main__':
     if args.need:    needs_ID()
     if args.fill:    fillID()
     if args.search:  getAll(args.name)
+    if args.nytimes: parseNYT()
