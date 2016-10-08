@@ -17,13 +17,6 @@ from openpyxl import Workbook
 _VERBOSE=False
 _DOIT=True
 
-OMDBdir = '/home/godzilla/Desktop/OMDBpy'
-idXLS = '%s/dvd-needs-id.xlsx'%OMDBdir
-fillidXLS = '%s/dvd-new-info.xlsx'%OMDBdir
-infoXLS= '%s/dvd-info.xlsx'%OMDBdir
-backXLS = '%s/dvd-info-bak.xlsx'%OMDBdir
-badF = '%s/bad-movie-names.txt'%OMDBdir
-
 keyL = [u'Title', u'Year', u'Series / Episode / ID', u'B-R',
         u'Runtime', u'DLed', u'Director', u'Actors', u'tomatoMeter',
         u'imdbRating', u'Plot', u'tomatoConsensus', u'Genre',
@@ -283,12 +276,21 @@ def main(save=False):
 
 if __name__ == '__main__':
 
+    OMDBdir = '/home/godzilla/Desktop/OMDBpy'
+    idXLS = '%s/dvd-needs-info.xlsx'%OMDBdir            # need info list if dl / col5 is None in dvd-info
+    fillidXLS = '%s/dvd-new-info.xlsx'%OMDBdir          # new info 
+    infoXLS= '%s/dvd-info.xlsx'%OMDBdir                 # entire list
+    backXLS = '%s/dvd-info-bak.xlsx'%OMDBdir
+    badF = '%s/bad-movie-names.txt'%OMDBdir
+
     import argparse
 
     parser = argparse.ArgumentParser(description='OMDB API processor')
-    parser.add_argument('-r', '--run', action='store_true', default=False,     help='Run the whole list %s'%infoXLS)
-    parser.add_argument('-i', '--need', action='store_true', default=False,     help='Run the need id list %s'%idXLS)
-    parser.add_argument('-f', '--fill', action='store_true', default=False,     help='Run the need fill list %s'%fillidXLS)
+    parser.add_argument('-r', '--run', action='store_true', default=False,     help='Run the whole list %s and refill'%infoXLS)
+    parser.add_argument('-i', '--need', action='store_true', default=False,
+                        help='Generate new need info list %s from whole list %s'% (idXLS, infoXLS) )
+    parser.add_argument('-f', '--fill', action='store_true', default=False,
+                        help='Get new info from id\'s in %s and put it into %s'% (idXLS, fillidXLS) )
     parser.add_argument('-s', '--search', action='store_true', default=False,     help='Search for name')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,     help='Verbose')
     parser.add_argument('-n', '--name', default=False,     help='movie name')
@@ -297,8 +299,8 @@ if __name__ == '__main__':
 
     _VERBOSE = args.verbose
     
-    if args.run:     main(save=True)
-    if args.need:    needs_ID()
-    if args.fill:    fillID()
+    if args.run:     main(save=True) # fill the entire dvd-info list with new information
+    if args.need:    needs_ID()    # parses dvd-info for no DL 'x' and puts them into dvd-needs-id list
+    if args.fill:    fillID()      # parses dvd-needs-id list and fills dvd-new-info list
     if args.search:  getAll(args.name)
     if args.nytimes: parseNYT()
