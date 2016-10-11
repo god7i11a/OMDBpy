@@ -1,5 +1,4 @@
-"""
->>> import requests
+""">>> import requests
 >>> r = requests.get('https://github.com/timeline.json')
 >>> r.json()
 
@@ -8,12 +7,33 @@
     print dir(r)
     print r.text
 
+
+long term solution: use csv for proper file diffs and convert to xlsx
+at end
+
+
+import csv
+import openpyxl
+
+wb = openpyxl.Workbook()
+ws = wb.active
+
+f = open('file.csv')
+reader = csv.reader(f, delimiter=':')
+for row in reader:
+    ws.append(row)
+f.close()
+
+wb.save('file.xlsx')
+
 """
 
 from requests import get as rget
 from openpyxl import load_workbook
 from openpyxl import Workbook
-
+import xlrd
+import csv
+ 
 _VERBOSE=False
 _DOIT=True
 
@@ -25,6 +45,18 @@ keyL = [u'Title', u'Year', u'Series / Episode / ID', u'B-R',
 searchL = [ "Title","Year","imdbID","Type" ]
 
 TYPE='movie'   # default search mode
+
+def csv_from_excel(fN):
+    
+    wb = xlrd.open_workbook(fN+'.xlsx')
+    sh = wb.sheet_by_name('Sheet1')
+    csv_file = open(fN+'.csv', 'wb')
+    wr = csv.writer(csv_file, quoting=csv.QUOTE_ALL)
+    
+    for rownum in xrange(sh.nrows):
+        wr.writerow(sh.row_values(rownum))
+    
+    csv_file.close()
 
 def make_not_found(movieN):
     theD = {field: ''  for field in keyL}
@@ -287,6 +319,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='OMDB API processor')
     parser.add_argument('-r', '--run', action='store_true', default=False,     help='Run the whole list %s and refill'%infoXLS)
+    parser.add_argument('-c', '--convert', action='store', default=None,     help='convert filename to csv or vice versa')    
     parser.add_argument('-i', '--need', action='store_true', default=False,
                         help='Generate new need info list %s from whole list %s'% (idXLS, infoXLS) )
     parser.add_argument('-f', '--fill', action='store_true', default=False,
@@ -304,3 +337,4 @@ if __name__ == '__main__':
     if args.fill:    fillID()      # parses dvd-needs-id list and fills dvd-new-info list
     if args.search:  getAll(args.name)
     if args.nytimes: parseNYT()
+    if args.convert: csv_from_excel(args.convert)
